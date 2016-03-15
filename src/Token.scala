@@ -97,12 +97,19 @@ object Token {
 
         case number if number.isDigit => {
           token = token :+("Number", number.toString)
+          var isDot = false
           breakable {
             for (i <- 1 until text.size) {
               if (text(i).isDigit) {
                 token = token.dropRight(1) :+(token.last._1, token.last._2 + text(i))
-              } else if(text(i)=='.') {
-                token = token.dropRight(1) :+("Double", token.last._2 + text(i))
+              } else if(text(i)=='.' && isDot==false) {
+                isDot= true;
+                if(text.substring(i).length>0 && text(i+1).isDigit)
+                  token = token.dropRight(1) :+("Double", token.last._2 + text(i))
+                else{
+                  scanner(text.substring(i), text(i))
+                  break
+                }
               }
               else {
                 scanner(text.substring(i), text(i))
@@ -110,7 +117,6 @@ object Token {
               }
             }
           }
-
           token
         }
 
@@ -120,19 +126,42 @@ object Token {
         case div if div.equals('/') =>
           if (text.length() > 1 && text(1) == '*') insertAndCheckNext(text, "MultilineComment")
           else if (text.length() > 1 && text(1) == '/') insertAndCheckNext(text, "SingleLineComment")
+          else if (text.length() > 1 && text(1) == '=') insertAndTakeNext(text.tail, "TwoMathChar", "/=", Some(div))
           else insertAndCheckNext(text, "Div", div)
 
         case multiply if multiply.equals('*') =>
           if (text.length() > 1 && text(1) == '*') insertAndTakeNext(text.tail, "Power", "**", Some(multiply))
+          else if (text.length() > 1 && text(1) == '=') insertAndTakeNext(text.tail, "TwoMathChar", "*=", Some(multiply))
           else insertAndCheckNext(text, "Multiply", multiply)
 
-        case plus if plus.equals('+') => insertAndCheckNext(text, "Plus", plus)
+        case assign if assign.equals('=') =>
+          if (text.length() > 1 && text(1) == '=') insertAndTakeNext(text.tail, "Equals", "==", Some(assign))
+          else insertAndCheckNext(text, "Assign", assign)
+
+
+        case plus if plus.equals('+') =>
+          if (text.length() > 1 && text(1) == '=') insertAndTakeNext(text.tail, "TwoMathChar", "+=", Some(plus))
+          else insertAndCheckNext(text, "Plus", plus)
+
+        case more if more.equals('>') =>
+          if (text.length() > 1 && text(1) == '=') insertAndTakeNext(text.tail, "MoreOrEqual", ">=", Some(more))
+          else insertAndCheckNext(text, "More", more)
+
+        case less if less.equals('<') =>
+          if (text.length() > 1 && text(1) == '=') insertAndTakeNext(text.tail, "LessOrEqual", ">=", Some(less))
+          else insertAndCheckNext(text, "Less", less)
+
+        case notEqual if notEqual.equals('!') =>
+          if (text.length() > 1 && text(1) == '=') insertAndTakeNext(text.tail, "NotEqual", "!=", Some(notEqual))
+          else insertAndCheckNext(text, "Negation", notEqual)
 
         case semicolon if semicolon.equals(';') => insertAndCheckNext(text, "Semicolon", semicolon)
 
         case coma if coma.equals(',') => insertAndCheckNext(text, "Coma", coma)
 
-        case minus if minus.equals('-') => insertAndCheckNext(text, "Minus", minus)
+        case minus if minus.equals('-') =>
+          if (text.length() > 1 && text(1) == '=') insertAndTakeNext(text.tail, "TwoMathChar", "-=", Some(minus))
+          else insertAndCheckNext(text, "Minus", minus)
 
         case dot if dot.equals('.') => insertAndCheckNext(text, "Dot", dot)
 
