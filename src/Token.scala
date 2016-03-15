@@ -1,3 +1,6 @@
+import model.Dictionary
+import scala.util.control.Breaks._
+
 case class Token(token: Seq[(String, String)]) {
 
   override def toString() = token.map {
@@ -55,27 +58,72 @@ object Token {
   }
 
   private def scanner(text: String, lastChar: Char): Seq[(String, String)] = {
-
     if (text.length() > 0)
       text.head match {
 
-        case quotes if quotes == '\"' => insertAndCheckNext(text, "Quotes")
+        case quotes if quotes == '\"' => {
+          token = token :+("Quotes", quotes.toString)
+          breakable {
+          for(i <-1 until text.size){
+            if(text(i) == quotes){
+              token = token.dropRight(1) :+(token.last._1, token.last._2 + quotes)
 
-        case ident if ident.isLetter || ident.isDigit =>
-          if (lastChar.isLetter || lastChar.isDigit) replaceAndCheckNext(text, ident)
-          else insertAndCheckNext(text, "Ident", ident)
+              scanner(text.substring(i+1), ' ')
+              break
+            }
+            else{
+              token = token.dropRight(1) :+(token.last._1, token.last._2 + text(i))
+            }
+          }}
 
-        case space if space.equals(' ') =>
-          if (lastChar == ' ') replaceAndCheckNext(text, space)
-          else insertAndCheckNext(text, "Space", space)
+          token
+        }
 
+        case ident if ident.isLetter => {
+          token = token :+("Ident", ident.toString)
+          breakable {
+            for (i <- 1 until text.size) {
+              if (text(i).isDigit || text(i).isLetter) {
+                token = token.dropRight(1) :+(token.last._1, token.last._2 + text(i))
+              }
+              else {
+                scanner(text.substring(i), text(i))
+                break
+              }
+            }
+          }
+          token
+        }
+
+        case number if number.isDigit => {
+          token = token :+("Number", number.toString)
+          breakable {
+            for (i <- 1 until text.size) {
+              if (text(i).isDigit) {
+                token = token.dropRight(1) :+(token.last._1, token.last._2 + text(i))
+              } else if(text(i)=='.') {
+                token = token.dropRight(1) :+("Double", token.last._2 + text(i))
+              }
+              else {
+                scanner(text.substring(i), text(i))
+                break
+              }
+            }
+          }
+
+          token
+        }
+
+        case space if space ==' ' => {
+          insertAndCheckNext(text, "Space", space)
+        }
         case div if div.equals('/') =>
           if (text.length() > 1 && text(1) == '*') insertAndCheckNext(text, "MultilineComment")
           else if (text.length() > 1 && text(1) == '/') insertAndCheckNext(text, "SingleLineComment")
           else insertAndCheckNext(text, "Div", div)
 
         case multiply if multiply.equals('*') =>
-          if (text.length() > 1 && text(1) == '*') insertAndTakeNext(text, "Power", "**", Some(multiply))
+          if (text.length() > 1 && text(1) == '*') insertAndTakeNext(text.tail, "Power", "**", Some(multiply))
           else insertAndCheckNext(text, "Multiply", multiply)
 
         case plus if plus.equals('+') => insertAndCheckNext(text, "Plus", plus)
@@ -93,13 +141,11 @@ object Token {
         case notDefined => insertAndCheckNext(text, "notDefined", notDefined, Some('_'))
       }
     else token.map {
-
-        case (_, value) if value.forall(Character.isDigit) => ("Number", value)
-        case (_, value) if Dictionary.getSk.contains(value) => ("Sk", value)
-        case (_, value) if Dictionary.getTypeOfVariable.contains(value) => ("Type", value)
-        case (_, value) if Dictionary.getReservedWord.contains(value) => ("Reserved", value)
-        case (key, value) if key.equals("Ident") && value(0).isDigit => ("Undefined", value)
-        case other => other
-      }
+      case (_, value) if Dictionary.getSk.contains(value) => ("Sk", value)
+      case (_, value) if Dictionary.getTypeOfVariable.contains(value) => ("Type", value)
+      case (_, value) if Dictionary.getReservedWord.contains(value) => ("Reserved", value)
+      case (key, value) if key.equals("Ident") && value(0).isDigit => ("Undefined", value)
+      case other => other
+    }
   }
 }

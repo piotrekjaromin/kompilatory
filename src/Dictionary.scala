@@ -1,3 +1,5 @@
+package model
+
 object Dictionary {
 
   private val sk: Seq[String] = Seq("if", "for", "while", "do")
@@ -11,6 +13,8 @@ object Dictionary {
 
   private val typeOfVariable: Seq[String] = Seq("byte", "short", "int", "long", "float", "double", "boolean", "char", "String")
 
+  private val matChar = Seq('=', '>', '<', '%', '-', '+', '/', '*')
+
   def getSk = sk
 
   def getReservedWord = reservedWord;
@@ -18,4 +22,6 @@ object Dictionary {
   def getTypeOfVariable = typeOfVariable;
 
   def getBracket = bracket
+
+  def getMatChar = matChar
 }

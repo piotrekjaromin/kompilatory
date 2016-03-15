@@ -1,5 +1,5 @@
 
-object Scanner extends App {
 
-  println(Token("int 1LL{32}1+**3342\"2*232/3\"4/*23+3*/2//-43"))
+object Scanner extends App {
+  println(Token("int 56.43.L$e67L 32ds1+**\"33.4\"22*232/34/*23+3*/2-43"))
 }
