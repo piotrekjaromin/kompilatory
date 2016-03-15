@@ -11,7 +11,7 @@ case class Token(token: Seq[(String, String)]) {
 
 object Token {
 
-  def apply(text: String): Token = Token(scanner(text, ' '))
+  def apply(text: String): Token = Token(parseScaner(scanner(text, ' ')))
 
   private var token: Seq[(String, String)] = Seq()
 
@@ -56,6 +56,16 @@ object Token {
     }
     comment + "*/"
   }
+
+  private def parseScaner(tokenToEdit: Seq[(String, String)]): Seq[(String, String)] = tokenToEdit map {
+      case (_, value) if Dictionary.getSk.contains(value) => ("Sk", value)
+      case (_, value) if Dictionary.getTypeOfVariable.contains(value) => ("Type", value)
+      case (_, value) if Dictionary.getReservedWord.contains(value) => ("Reserved", value)
+      case (key, value) if key.equals("Ident") && value(0).isDigit => ("Undefined", value)
+      case other => other
+
+  }
+
 
   private def scanner(text: String, lastChar: Char): Seq[(String, String)] = {
     if (text.length() > 0)
@@ -167,14 +177,20 @@ object Token {
 
         case bracket if Dictionary.getBracket.contains(bracket)  => insertAndCheckNext(text, "Bracket", bracket)
 
+        case newLine if newLine=='\n'  => insertAndCheckNext(text, "NewLine", '_')
+
+        case newLine if newLine=='\t'  => insertAndCheckNext(text, "Tabular", '_')
+
         case notDefined => insertAndCheckNext(text, "notDefined", notDefined, Some('_'))
       }
-    else token.map {
+    else{
+      token.map {
       case (_, value) if Dictionary.getSk.contains(value) => ("Sk", value)
       case (_, value) if Dictionary.getTypeOfVariable.contains(value) => ("Type", value)
       case (_, value) if Dictionary.getReservedWord.contains(value) => ("Reserved", value)
       case (key, value) if key.equals("Ident") && value(0).isDigit => ("Undefined", value)
       case other => other
+    }
     }
   }
 }
